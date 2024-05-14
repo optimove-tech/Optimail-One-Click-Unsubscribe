@@ -41,9 +41,9 @@ static string ComputeHMACSHA256Hash(string message, string base64Key)
     }
 }
 
-static bool VerifyHMACSHA256Hash(string email, string base64Key, string signature)
+static bool VerifySignature(string email, string secretKey, string signature)
 {
-    string computedHash = ComputeHMACSHA256Hash(email, base64Key);
+    string computedHash = ComputeHMACSHA256Hash(email, secretKey);
     return computedHash == signature;
 }
 ```
@@ -52,17 +52,17 @@ static bool VerifyHMACSHA256Hash(string email, string base64Key, string signatur
 ```js
 const crypto = require('crypto');
 
-function verifyHMACSHA256Hash(message, base64Key, signature) {
-    const key = Buffer.from(base64Key, 'base64');
+function verifySignature(email, secretKey, signature) {
+    const key = Buffer.from(secretKey, 'base64');
     const computedHash = crypto.createHmac('sha256', key)
-                                .update(message)
+                                .update(email)
                                 .digest('base64');
 
     return computedHash === signature;
 }
 
 
-const isSignatureValid = verifyHMACSHA256Hash("email@gmail.com", "xnkdrtS59fi9w72EbxtygjQJUJdjFkO+eyTv02sqgjD27yZHivtFUAlqPtkWZnuVVT7SF6T2XiE5bmdWPmALbw==", "JnKuuIW/5gFtWOl5KvpYBHa53buGSx0WwbeX/kKL98w=")
+const isSignatureValid = verifySignature("email@gmail.com", "xnkdrtS59fi9w72EbxtygjQJUJdjFkO+eyTv02sqgjD27yZHivtFUAlqPtkWZnuVVT7SF6T2XiE5bmdWPmALbw==", "JnKuuIW/5gFtWOl5KvpYBHa53buGSx0WwbeX/kKL98w=")
 ```
 
 ### Python
@@ -71,24 +71,24 @@ import hashlib
 import hmac
 import base64
 
-def verify_hmac_sha256_hash(message, base64_key, signature):
-    key = base64.b64decode(base64_key)
-    computed_hash = hmac.new(key, message.encode('utf-8'), hashlib.sha256).digest()
+def verify_signature(email, secret_key, signature):
+    key = base64.b64decode(secret_key)
+    computed_hash = hmac.new(key, email.encode('utf-8'), hashlib.sha256).digest()
     computed_hash_base64 = base64.b64encode(computed_hash).decode('utf-8')
     return computed_hash_base64 == signature
 
-is_signature_valid = verify_hmac_sha256_hash("email@gmail.com", "xnkdrtS59fi9w72EbxtygjQJUJdjFkO+eyTv02sqgjD27yZHivtFUAlqPtkWZnuVVT7SF6T2XiE5bmdWPmALbw==", "JnKuuIW/5gFtWOl5KvpYBHa53buGSx0WwbeX/kKL98w=")
+is_signature_valid = verify_signature("email@gmail.com", "xnkdrtS59fi9w72EbxtygjQJUJdjFkO+eyTv02sqgjD27yZHivtFUAlqPtkWZnuVVT7SF6T2XiE5bmdWPmALbw==", "JnKuuIW/5gFtWOl5KvpYBHa53buGSx0WwbeX/kKL98w=")
 ```
 
 ### Java
 ```java
-public static boolean verifyHMACSHA256Hash(String message, String base64Key, String signature) {
+public static boolean verifySignature(String email, String secretKey, String signature) {
     try {
-        byte[] keyBytes = Base64.getDecoder().decode(base64Key);
+        byte[] keyBytes = Base64.getDecoder().decode(secretKey);
         SecretKeySpec keySpec = new SecretKeySpec(keyBytes, "HmacSHA256");
         Mac mac = Mac.getInstance("HmacSHA256");
         mac.init(keySpec);
-        byte[] hash = mac.doFinal(message.getBytes());
+        byte[] hash = mac.doFinal(email.getBytes());
         String computedHash = Base64.getEncoder().encodeToString(hash);
         return computedHash.equals(signature);
     } catch (NoSuchAlgorithmException | java.security.InvalidKeyException e) {
