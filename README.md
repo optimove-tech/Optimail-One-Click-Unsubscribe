@@ -44,7 +44,7 @@ static string ComputeHMACSHA256Hash(string message, string base64Key)
 static bool VerifySignature(string email, string secretKey, string signature)
 {
     string computedHash = ComputeHMACSHA256Hash(email, secretKey);
-    return computedHash == signature;
+    return CryptographicOperations.FixedTimeEquals(Convert.FromBase64String(computedHash), Convert.FromBase64String(signature));
 }
 ```
 
