@@ -75,7 +75,7 @@ def verify_signature(email, secret_key, signature):
     key = base64.b64decode(secret_key)
     computed_hash = hmac.new(key, email.encode('utf-8'), hashlib.sha256).digest()
     computed_hash_base64 = base64.b64encode(computed_hash).decode('utf-8')
-    return computed_hash_base64 == signature
+    return hmac.compare_digest(computed_hash_base64, signature)
 
 is_signature_valid = verify_signature("email@gmail.com", "xnkdrtS59fi9w72EbxtygjQJUJdjFkO+eyTv02sqgjD27yZHivtFUAlqPtkWZnuVVT7SF6T2XiE5bmdWPmALbw==", "JnKuuIW/5gFtWOl5KvpYBHa53buGSx0WwbeX/kKL98w=")
 ```
