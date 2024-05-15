@@ -57,10 +57,10 @@ function verifySignature(email, secretKey, signature) {
     const computedHash = crypto.createHmac('sha256', key)
                                 .update(email)
                                 .digest('base64');
-
-    return computedHash === signature;
+    const computedHashBuffer = Buffer.from(computedHash);
+    const signatureBuffer = Buffer.from(signature);
+    return crypto.timingSafeEqual(computedHashBuffer, signatureBuffer);
 }
-
 
 const isSignatureValid = verifySignature("email@gmail.com", "xnkdrtS59fi9w72EbxtygjQJUJdjFkO+eyTv02sqgjD27yZHivtFUAlqPtkWZnuVVT7SF6T2XiE5bmdWPmALbw==", "JnKuuIW/5gFtWOl5KvpYBHa53buGSx0WwbeX/kKL98w=")
 ```
