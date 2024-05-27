@@ -14,12 +14,12 @@ Assuming that your Optimail settings have been configured with an `HTTP/S Unsubs
 
 `email` - url-encoded email recipient value
 
-`signature` - base64 encoded HMAC digested with SHA256 algorithm using the secret key generated in optimove settings e.g. `xnkdrtS59fi9w72EbxtygjQJUJdjFkO+eyTv02sqgjD27yZHivtFUAlqPtkWZnuVVT7SF6T2XiE5bmdWPmALbw==`
+`signature` - url encoded and base64 encoded HMAC digested with SHA256 algorithm using the secret key generated in optimove settings e.g. `xnkdrtS59fi9w72EbxtygjQJUJdjFkO+eyTv02sqgjD27yZHivtFUAlqPtkWZnuVVT7SF6T2XiE5bmdWPmALbw==`
 
 an example request you could receive is:
 
 ```
-POST https://mydomain.com/unsubscribe?email=email%40gmail.com&signature=JnKuuIW/5gFtWOl5KvpYBHa53buGSx0WwbeX/kKL98w= HTTP/1.1
+POST https://mydomain.com/unsubscribe?email=email%40gmail.com&signature=JnKuuIW%2F5gFtWOl5KvpYBHa53buGSx0WwbeX%2FkKL98w%3D HTTP/1.1
 Host: example.com
 Content-Type: application/x-www-form-urlencoded
 Content-Length: 100
