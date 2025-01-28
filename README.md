@@ -10,6 +10,8 @@ This repository contains examples on how to verify the signature from an unsubsc
 
 ## Prerequisites
 
+### Version without email encryption 
+
 Assuming that your Optimail settings have been configured with an `HTTP/S Unsubscribe` path of `https://mydomain.com/unsubscribe` then the generated unsubscribe links will append querystring parameters for
 
 `email` - url-encoded email recipient value
@@ -94,6 +96,149 @@ public static boolean verifySignature(String email, String secretKey, String sig
     } catch (NoSuchAlgorithmException | java.security.InvalidKeyException e) {
         e.printStackTrace();
         return false;
+    }
+}
+```
+
+
+### Version with email encryption 
+
+Assuming that your Optimail settings have been configured with an `HTTP/S Unsubscribe` path of `https://mydomain.com/unsubscribe` and encrypt email checkbox is checked, then the generated unsubscribe links will append querystring parameters for
+
+`encrypted_email` - url-encoded and base64 encoded email recipient value encrypted using AES GCM algorithm using the secret key generated in optimove settings e.g. `xnkdrtS59fi9w72EbxtygjQJUJdjFkO+eyTv02sqgjD27yZHivtFUAlqPtkWZnuVVT7SF6T2XiE5bmdWPmALbw==`
+
+`nonce` - base64 encoded iv (initialization vector) needed for email decryption
+
+`tag` - base64 encoded authentication tag for integrity and authenticity of the encrypted data when decrypting
+
+an example request you could receive is:
+
+```
+POST https://mydomain.com/unsubscribe?encrypted_email%3DHkukxA3vR0gZYObRNYw%3D%26nonce%3DwMCjiJt%2FrTKvSwTd%26tag%3DOXSN8WNAYNwwTT5rqNfYuw%3D HTTP/1.1
+Host: example.com
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 100
+```
+
+
+## Code examples for email decryprion
+
+### C#
+```csharp
+ public string Decrypt(string ciphertext, string nonce, string tag, string key)
+ {
+     var cipherTextBytes = Convert.FromBase64String(ciphertext);
+     var nonceBytes = Convert.FromBase64String(nonce);
+     var tagBytes = Convert.FromBase64String(tag);
+     var keyBytes = Convert.FromBase64String(key);
+     using (var aes = new AesGcm(keyBytes))
+     {
+         var plaintextBytes = new byte[cipherTextBytes.Length];
+         aes.Decrypt(nonceBytes, cipherTextBytes, tagBytes, plaintextBytes);
+         return Encoding.UTF8.GetString(plaintextBytes);
+     }
+ }
+```
+
+
+
+### JavaScript
+```js
+import { randomBytes,createCipheriv,createDecipheriv } from 'crypto';
+const aes256gcm = (key) => {
+    const decrypt = (tagBase, encodBase, nonceBase) => {
+        const iv = Buffer.from(nonceBase, "base64");
+        const tag = Buffer.from(tagBase, "base64");
+        const enc = Buffer.from(encodBase, "base64");
+        const decipher = createDecipheriv('aes-256-gcm', key, iv);
+        decipher.setAuthTag(tag);
+        let str = decipher.update(enc, null, 'utf8');
+        str += decipher.final('utf8');
+        return str;
+    };
+
+    return {
+        encrypt,
+        decrypt,
+    };
+};
+```
+
+
+### Python
+```python
+from Crypto.Cipher import AES
+import hashlib
+import sys
+import binascii
+import base64
+
+def decrypt(ciphertext,key, mode):
+  (ciphertext,  authTag, nonce) = ciphertext
+  encobj = AES.new(key,  mode, nonce)
+  return(encobj.decrypt_and_verify(ciphertext, authTag))
+  
+ #put values from query params
+nonceBase64 = "wMCjiJt/rTKvSwTd"
+tag = "OXSN8WNAYNwwTT5rqNfYuw=="
+encodedData = "HkukxA3vR0gZYObRNYw="
+tagDe = base64.b64decode(tag)
+nonceDe = base64.b64decode(nonceBase64)
+encryptedEmailDe = base64.b64decode(encodedData)
+
+res= decrypt((encryptedEmailDe,tagDe, nonceDe),key,AES.MODE_GCM)
+```
+
+
+### Java
+```java
+public class AESGCM {
+    private static final String AES_GCM_NO_PADDING = "AES/GCM/NoPadding";
+    private static final int GCM_TAG_LENGTH = 16; // 16 bytes = 128 bits
+    private static final int GCM_NONCE_LENGTH = 12; // 12 bytes = 96 bits
+
+    /**
+     * Decrypts the given ciphertext using AES-GCM.
+     *
+     * @param ciphertext The Base64-encoded ciphertext to decrypt.
+     * @param secretKey  The AES secret key.
+     * @param nonce      The nonce (IV) used for decryption.
+     * @return The decrypted plaintext.
+     * @throws Exception if decryption fails.
+     */
+    public static String decrypt(String ciphertext, SecretKey secretKey, byte[] nonce) throws Exception {
+        Cipher cipher = Cipher.getInstance(AES_GCM_NO_PADDING);
+        GCMParameterSpec gcmParameterSpec = new GCMParameterSpec(GCM_TAG_LENGTH * 8, nonce);
+        cipher.init(Cipher.DECRYPT_MODE, secretKey, gcmParameterSpec);
+
+        byte[] encryptedData = Base64.getDecoder().decode(ciphertext);
+        byte[] decryptedData = cipher.doFinal(encryptedData);
+        return new String(decryptedData);
+    }
+
+    public static void main(String[] args) throws Exception {
+        // Secret key initialization -- put private key here
+        byte[] fullArr = Base64.getDecoder().decode("eRP8B2iUAYP2JCYyta0AKHSlu3KWerr5ap/dBj/1wzw9B+tYwNkQiiGcr2wm8bbBvkhlm/y8XXsN6PWuCCEphw==");
+        byte[] decodedKey = Arrays.copyOfRange(fullArr, 0, 32);
+        SecretKey secretKey = new SecretKeySpec(decodedKey, 0, decodedKey.length, "AES");
+
+        // Nonce (IV) initialization
+        String nonceBase64 = "wMCjiJt/rTKvSwTd";
+        byte[] nonce = Base64.getDecoder().decode(nonceBase64);
+
+        // Decrypt with hardcoded values -- put nonce and tag that comes from query params here
+        String tag = "OXSN8WNAYNwwTT5rqNfYuw==";
+        String encodedData = "HkukxA3vR0gZYObRNYw=";
+        byte[] tagDe = Base64.getDecoder().decode(tag);
+        byte[] dataDe = Base64.getDecoder().decode(encodedData);
+
+        byte[] combinedData = new byte[tagDe.length + dataDe.length];
+        System.arraycopy(dataDe, 0, combinedData, 0, dataDe.length);
+        System.arraycopy(tagDe, 0, combinedData, dataDe.length, tagDe.length);
+
+        String combinedBase64 = Base64.getEncoder().encodeToString(combinedData);
+        String decryptedTextHardcoded = decrypt(combinedBase64, secretKey, nonce);
+        System.out.println("Decrypted Text (Hardcoded): " + decryptedTextHardcoded);
     }
 }
 ```
