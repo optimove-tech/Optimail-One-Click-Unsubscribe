@@ -107,9 +107,9 @@ Assuming that your Optimail settings have been configured with an `HTTP/S Unsubs
 
 `encrypted_email` - url-encoded and base64 encoded email recipient value encrypted using AES GCM algorithm using the secret key generated in optimove settings e.g. `xnkdrtS59fi9w72EbxtygjQJUJdjFkO+eyTv02sqgjD27yZHivtFUAlqPtkWZnuVVT7SF6T2XiE5bmdWPmALbw==`
 
-`nonce` - base64 encoded iv (initialization vector) needed for email decryption
+`nonce` -  url-encoded and base64 encoded iv (initialization vector) needed for email decryption
 
-`tag` - base64 encoded authentication tag for integrity and authenticity of the encrypted data when decrypting
+`tag` -  url-encoded and base64 encoded authentication tag for integrity and authenticity of the encrypted data when decrypting
 
 an example request you could receive is:
 
