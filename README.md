@@ -10,6 +10,8 @@ This repository contains examples on how to verify the signature from an unsubsc
 
 ## Prerequisites
 
+### Version without email encryption 
+
 Assuming that your Optimail settings have been configured with an `HTTP/S Unsubscribe` path of `https://mydomain.com/unsubscribe` then the generated unsubscribe links will append querystring parameters for
 
 `email` - url-encoded email recipient value
@@ -97,3 +99,116 @@ public static boolean verifySignature(String email, String secretKey, String sig
     }
 }
 ```
+
+
+### Version with email encryption
+
+Assuming that your Optimail settings have been configured with an `HTTP/S Unsubscribe` path of `https://mydomain.com/unsubscribe` and the encrypt email checkbox is checked, the generated unsubscribe links will append query string parameters for:
+
+- `encrypted_email` - URL-encoded and Base64-encoded email recipient value encrypted using the AES-GCM algorithm with the secret key generated in Optimove settings, e.g., `xnkdrtS59fi9w72EbxtygjQJUJdjFkO+eyTv02sqgjD27yZHivtFUAlqPtkWZnuVVT7SF6T2XiE5bmdWPmALbw==`.
+- `nonce` - URL-encoded and Base64-encoded IV (initialization vector) needed for email decryption.
+- `tag` - URL-encoded and Base64-encoded authentication tag for ensuring the integrity and authenticity of the encrypted data when decrypting.
+
+An example request you could receive:
+
+```
+POST https://mydomain.com/unsubscribe?encrypted_email%3DHkukxA3vR0gZYObRNYw%3D%26nonce%3DwMCjiJt%2FrTKvSwTd%26tag%3DOXSN8WNAYNwwTT5rqNfYuw%3D HTTP/1.1
+Host: example.com
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 100
+```
+
+---
+
+## Code examples for email decryption (important - secret key should be trimmed to 32 bytes!)
+
+### C#
+
+```csharp
+public string DecryptEmail(string encryptedEmail, string nonce, string tag, string secretKey)
+{
+    var encryptedEmailBytes = Convert.FromBase64String(encryptedEmail);
+    var nonceBytes = Convert.FromBase64String(nonce);
+    var tagBytes = Convert.FromBase64String(tag);
+    var secretKeyBytes = Convert.FromBase64String(secretKey);
+    
+    using (var aes = new AesGcm(secretKeyBytes))
+    {
+        var plaintextBytes = new byte[encryptedEmailBytes.Length];
+        aes.Decrypt(nonceBytes, encryptedEmailBytes, tagBytes, plaintextBytes);
+        return Encoding.UTF8.GetString(plaintextBytes);
+    }
+}
+```
+
+### JavaScript
+
+```js
+import { createDecipheriv } from 'crypto';
+
+const decryptEmail = (encryptedEmail, nonce, tag, secretKey) => {
+    const iv = Buffer.from(nonce, "base64");
+    const authTag = Buffer.from(tag, "base64");
+    const encryptedData = Buffer.from(encryptedEmail, "base64");
+    
+    const decipher = createDecipheriv('aes-256-gcm', secretKey, iv);
+    decipher.setAuthTag(authTag);
+    
+    let decrypted = decipher.update(encryptedData, null, 'utf8');
+    decrypted += decipher.final('utf8');
+    return decrypted;
+};
+```
+
+### Python
+
+```python
+from Crypto.Cipher import AES
+import base64
+
+def decrypt_email(encrypted_email, nonce, tag, secret_key):
+    encrypted_email_bytes = base64.b64decode(encrypted_email)
+    nonce_bytes = base64.b64decode(nonce)
+    tag_bytes = base64.b64decode(tag)
+    secret_key_bytes = base64.b64decode(secret_key)
+    
+    cipher = AES.new(secret_key_bytes, AES.MODE_GCM, nonce_bytes)
+    return cipher.decrypt_and_verify(encrypted_email_bytes, tag_bytes).decode('utf-8')
+```
+
+### Java
+
+```java
+import javax.crypto.Cipher;
+import javax.crypto.spec.GCMParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
+import java.util.Base64;
+
+public class AESGCM {
+    private static final String AES_GCM_NO_PADDING = "AES/GCM/NoPadding";
+    private static final int GCM_TAG_LENGTH = 16; // 16 bytes = 128 bits
+    
+    public static String decryptEmail(String encryptedEmail, String secretKey, String nonce, String tag) throws Exception {
+        byte[] encryptedData = Base64.getDecoder().decode(encryptedEmail);
+        byte[] secretKeyBytes = Base64.getDecoder().decode(secretKey);
+        byte[] nonceBytes = Base64.getDecoder().decode(nonce);
+        byte[] tagBytes = Base64.getDecoder().decode(tag);
+
+        byte[] combinedData = new byte[tagBytes.length + encryptedData.length];
+        System.arraycopy(encryptedData, 0, combinedData, 0, encryptedData.length);
+        System.arraycopy(tagBytes, 0, combinedData, encryptedData.length, tagBytes.length);
+        
+        Cipher cipher = Cipher.getInstance(AES_GCM_NO_PADDING);
+        GCMParameterSpec gcmParameterSpec = new GCMParameterSpec(GCM_TAG_LENGTH * 8, nonceBytes);
+        SecretKeySpec keySpec = new SecretKeySpec(secretKeyBytes, "AES");
+        cipher.init(Cipher.DECRYPT_MODE, keySpec, gcmParameterSpec);
+    
+        
+        byte[] decryptedData = cipher.doFinal(combinedData);
+        return new String(decryptedData);
+    }
+}
+```
+
+
+
